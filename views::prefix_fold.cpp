@@ -22,6 +22,9 @@ struct prefix_fold_view{
     const int& operator[](int x){
         return __prefix_fold[x];
     }
+    int size(){
+        return __prefix_fold.size();
+    }
 };
 template<typename T, typename F>
 struct prefix_fold_range_adapter_closure{
