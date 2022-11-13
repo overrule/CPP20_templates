@@ -1,6 +1,6 @@
 namespace std::ranges{
 
-template<ranges::viewable_range R>
+template<ranges::range R>
 auto _freq_map(R&& r){
     using T = std::remove_reference_t<decltype(*r.begin())>;
     map<T, int> __freq_map;
@@ -14,7 +14,7 @@ auto _freq_map(R&& r){
 struct freq_map_range_adapter{
     template<ranges::range R>
     constexpr auto operator()(R&& r) const{
-        return _freq_map<ranges::views::all_t<R>>(std::forward<R>(r));
+        return _freq_map(std::forward<R>(r));
     }
 };
 template <ranges::range R>
