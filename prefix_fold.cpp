@@ -36,5 +36,7 @@ template <ranges::viewable_range R, typename T, typename F>
 constexpr auto operator | (R&& r, prefix_fold_range_adapter_closure<T, F>&& closure){
     return closure(std::forward<R>(r));
 }
+//returns std::vector<T> prefix_fold, where T is return type of lambda
+//prefix_fold[0] = initial, and prefix_fold[i] = f(prefix_fold[i-1], a[i-1]), where a is input range
 prefix_fold_range_adapter prefix_fold;
 }
