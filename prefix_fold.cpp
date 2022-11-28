@@ -3,7 +3,9 @@ namespace std::ranges{
 template<ranges::range R, typename T>
 auto _prefix_fold(R r, auto&& f, T initial){
     vector<T> __prefix_fold;
-    __prefix_fold.resize(ranges::size(r) + 1);
+    int sz = 0;
+    for(auto &x : r) ++sz;
+    __prefix_fold.resize(sz + 1);
     __prefix_fold[0] = initial;
     auto iter_rg = r.begin();
     auto iter_fold = __prefix_fold.begin();
