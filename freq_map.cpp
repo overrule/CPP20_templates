@@ -2,7 +2,7 @@ namespace std::ranges{
 
 template<ranges::range R>
 auto _freq_map(R&& r){
-    using T = std::remove_reference_t<decltype(*r.begin())>;
+    using T = std::remove_decay_t<decltype(*r.begin())>;
     std::map<T, int> __freq_map;
     auto iter_rg = r.begin();
     while(iter_rg != r.end()){
