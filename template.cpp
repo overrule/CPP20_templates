@@ -1,7 +1,7 @@
 #include <bits/stdc++.h>
 using namespace std;
 using ll = long long int;
-template<ranges::viewable_range T> 
+template<ranges::range T> 
 ostream& operator+(ostream& out, const T& vec){
     for(const auto &x : vec){
         if constexpr(ranges::viewable_range<decltype(x)>){
