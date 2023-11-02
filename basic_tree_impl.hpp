@@ -1,5 +1,6 @@
 #pragma once
 #include "bits/stdc++.h"
+#include "tree_tag.hpp"
 struct BasicTreeTag;
 template<typename adjacency_list = basic_string<int>>
 struct _basic_tree_impl{
