@@ -1,16 +1,11 @@
-enum SearchType{
-    first_false,
-    last_true
-};
-#define _st_search
-template<typename T, typename F_m>
+template<typename T, typename F_m> 
 struct segment_tree {
     int n;
     int n__;
     vector<T> st;
     F_m join;
     T base = T();
-    segment_tree(ranges::range auto&& r, F_m _join, T _base = T()) : n__(std::distance(r.begin(), r.end())), join(_join), base(_base){
+    segment_tree(ranges::input_range auto&& r, F_m _join, T _base = T()) : n__(std::distance(r.begin(), r.end())), join(_join), base(_base){
         #ifdef _st_search
         n = 1 << (32 - __builtin_clz(n__ - 1));
         #else
@@ -35,7 +30,7 @@ struct segment_tree {
         #else
         n = n__;
         #endif
-        st.resize(n << 1, base);
+        st.resize(n << 1);
         for(int i=0; auto x : r){
             st[n + i] = x;
             ++i;
@@ -55,26 +50,36 @@ struct segment_tree {
         st[pos] = val;
         calc(pos);
     }
-    auto set__(){
-        return [&](int pos, T val){
-            return set(pos, val);
-        };
-    }
     void increment(int pos, T val){
         pos += n;
         st[pos] = join(st[pos], val);
         calc(pos);
     }
-    auto increment__(){
-        return [&](int pos, T val){
-            return increment(pos, val);
-        };
+    class Proxy {
+        segment_tree& seg_tree;
+        int pos;
+    public:
+        Proxy(segment_tree& st, int p) : seg_tree(st), pos(p) {}
+        Proxy& operator=(T val) {
+            seg_tree.set(pos, val);
+            return *this;
+        }
+        Proxy& operator*=(T val) {
+            seg_tree.increment(pos, val);
+            return *this;
+        }
+        operator T() const {
+            return seg_tree.st[pos + seg_tree.n];
+        }
+    };
+    Proxy operator[](int pos) {
+        return Proxy(*this, pos);
     }
     T query(int l, int r) {
         T ansl = base;
         T ansr = base;
         l += n;
-        r += n + 1;
+        r += n+1;
         while (l < r) {
             if (l & 1) {
                 ansl = join(ansl, st[l++]);
@@ -87,78 +92,57 @@ struct segment_tree {
         }
         return join(ansl, ansr);
     }
-    auto query__(){
-        return [&](int l, int r){
-            return query(l, r);
-        };
+    T operator()(int l, int r) {
+    	return query(l,r);
     }
-    template<typename F> requires std::is_invocable_v<F, T> and std::is_same_v<bool, decltype(declval<F>()(declval<T>()))>;
-    pair<T, int> prefix_search(F cond, SearchType search_type, int start_loc = 0) {
-        start_loc += n;
-        int curr_idx = start_loc;
-        T curr_val = base;
-        curr_idx >>= __builtin_ctz(curr_idx);
-        while(__builtin_popcount(curr_idx + 1) != 1){
-            auto nxt = join(curr_val, st[curr_idx]);
-            if(!cond(nxt)) break;
-            curr_idx >>= 1;
-            curr_idx += 1;
-            curr_val = nxt;
-            curr_idx >>= __builtin_ctz(curr_idx);
-        }
-        while(curr_idx < n){
-            curr_idx <<= 1;
-            T merged = join(curr_val, st[curr_idx]);
-            if(cond(merged)){
-                curr_val = merged;
-                curr_idx++;
-            }
-        }
-        if(auto merged = join(curr_val, st[curr_idx]); cond(merged)){
-            curr_val = merged;
-            curr_idx++;
-        }
-        if(search_type == SearchType::last_true){
-            return pair(min(curr_idx - n - 1, n__ - 1), curr_val);
-        }
-        else{
-            return pair(min(curr_idx - n, n__), join(curr_val, st[curr_idx]));
-        }
+    T get(int pos) {
+    	if (pos<0 || pos>=n__) return base;
+    	return st[pos+n];
     }
-    template<typename F> // requires std::is_invocable_v<F, T> and std::is_same_v<bool, decltype(declval<F>()(declval<T>()))>;
-    pair<T, int> suffix_search(F cond, SearchType search_type, int start_loc = -1) {
-        if(start_loc == -1) start_loc = n__ - 1;
-        start_loc += n;
-        int curr_idx = start_loc;
+    template<typename F>
+    pair<T,int> prefix_search(F cond, int start_loc = 0) {
+    	start_loc++;
+        if (start_loc == 0) return pair(-1,base);
+        int curr_idx = start_loc + n;
         T curr_val = base;
-        curr_idx >>= __builtin_ctz(~curr_idx);
-        while(__builtin_popcount(curr_idx) != 1){
-            auto nxt = join(st[curr_idx], curr_val);
-            if(!cond(nxt)) break;
-            curr_idx >>= 1;
-            curr_idx -= 1;
-            curr_val = nxt;
-            curr_idx >>= __builtin_ctz(~curr_idx);
-        }
-        while(curr_idx < n){
-            curr_idx <<= 1;
-            curr_idx++;
-            T merged = join(curr_val, st[curr_idx]);
-            if(cond(merged)){
-                curr_val = merged;
-                curr_idx--;
+        do {
+            curr_idx--;
+            while (curr_idx > 1 && (curr_idx % 2)) curr_idx >>= 1;
+            if (!cond(join(st[curr_idx], curr_val))) {
+                while (curr_idx < n) {
+                    curr_idx <<= 1;
+                    curr_idx++;
+                    if (cond(join(st[curr_idx], curr_val))) {
+                        curr_val = join(st[curr_idx], curr_val);
+                        curr_idx--;
+                    }
+                }
+                return pair(curr_idx - n,st[curr_idx]);
             }
-        }
-        if(auto merged = join(st[curr_idx], curr_val); cond(merged)){
-            curr_val = merged;
-            --curr_idx;
-        }
-        if(search_type == SearchType::last_true){
-            return pair(curr_idx - n + 1, curr_val);
-        }
-        else{
-            return pair(curr_idx - n, join(curr_val, st[curr_idx]));
-        }
+            curr_val = join(st[curr_idx], curr_val);
+        } while ((curr_idx & -curr_idx) != curr_idx);
+        return pair(-1,base);
+    }
+    template<typename F>
+    pair<T,int> suffix_search(F cond, int start_loc = -1) {
+        if (start_loc == n__) return pair(n__,base);
+        int curr_idx = start_loc + n;
+        T curr_val = base;
+        do {
+            while (curr_idx % 2 == 0) curr_idx >>= 1;
+            if (!cond(join(curr_val, st[curr_idx]))) {
+                while (curr_idx < n) {
+                    curr_idx <<= 1;
+                    if (cond(join(curr_val, st[curr_idx]))) {
+                        curr_val = join(curr_val, st[curr_idx]);
+                        curr_idx++;
+                    }
+                }
+                return pair(curr_idx - n,st[curr_idx]);
+            }
+            curr_val = join(curr_val, st[curr_idx]);
+            curr_idx++;
+        } while ((curr_idx & -curr_idx) != curr_idx);
+        return pair(n__,base);
     }
 };
-#undef _st_search
